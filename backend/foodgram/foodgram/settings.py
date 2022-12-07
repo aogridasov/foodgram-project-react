@@ -2,7 +2,6 @@ import os
 
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 DEV_MODE = (os.getenv('DEV_MODE', default=False) == 'True')
@@ -19,6 +18,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'recipes.apps.RecipesConfig',
+    'shopping_cart.apps.ShoppingCartConfig'
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
