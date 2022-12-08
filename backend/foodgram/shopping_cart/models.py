@@ -1,18 +1,16 @@
-from django.contrib.auth import get_user_model
 from django.db import models
 
-from foodgram.recipes.models import Recipe
-
-
-User = get_user_model()
+from recipes.models import Recipe
+from users.models import User
 
 
 class ShoppingCart(models.Model):
-    """Модель тега для рецептов"""
+    """Модель списка покупок"""
     user = models.ForeignKey(
         User,
         related_name='shoppingcart',
-        verbose_name='Пользователь'
+        verbose_name='Пользователь',
+        on_delete=models.CASCADE,
     )
     recipes = models.ManyToManyField(
         Recipe,

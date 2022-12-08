@@ -1,34 +1,39 @@
 from colorfield.fields import ColorField
-from django.contrib.auth import get_user_model
 from django.db import models
 
-User = get_user_model()
+from users.models import User
 
 
 class Tag(models.Model):
     """Модель тега для рецептов"""
-    title = models.CharField(max_length=100, verbose_name='Название тега')
-    hex_code = ColorField(default='#FF0000',)
+    name = models.CharField(max_length=100, verbose_name='Название тега')
+    color = ColorField(default='#FF0000',)
     slug = models.SlugField(unique=True, verbose_name='Слаг')
 
     def __str__(self):
-        return 'Тэг: ' + self.title
+        return self.name
 
 
 class Measure(models.Model):
     """Модель единиц измерения ингредиентов"""
-    units = models.CharField(max_length=10, verbose_name='Единица измерения')    # choicefield?
+    measurement_unit = models.CharField(max_length=10, verbose_name='Единица измерения')
 
     def __str__(self):
-        return str(self.units)
+        return str(self.measurement_unit)
 
 
 class Ingredient(models.Model):
     """Модель ингредиента"""
-    title = models.CharField(max_length=100, verbose_name='Название ингредиента')
+    name = models.CharField(max_length=100, verbose_name='Название ингредиента')
+    measurement_unit = models.ForeignKey(
+        Measure,
+        null=True,
+        on_delete=models.SET_NULL,
+        verbose_name='Единица измерения'
+    )
 
     def __str__(self):
-        return 'Ингредиент: ' + self.title
+        return self.name
 
 
 class Recipe(models.Model):
@@ -41,57 +46,69 @@ class Recipe(models.Model):
         verbose_name='Автор рецепта',
     )
     pub_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата публикации')
-    title = models.CharField(max_length=256, verbose_name='Название рецепта')
-    image = models.ImageField(verbose_name='Фото рецепта', null=True)
-    description = models.TextField(verbose_name='Описание рецепта')
-    tag = models.ManyToManyField(Tag, verbose_name='Теги', related_name='recipes')
-    cooking_time = models.IntegerField(verbose_name='Время приготовления') # Нужна валидация на минуты? или конвертация в часы?
+    name = models.CharField(max_length=256, verbose_name='Название рецепта')
+    image = models.ImageField(verbose_name='Фото рецепта', blank=True, null=True)
+    text = models.TextField(verbose_name='Описание рецепта')
+    tags = models.ManyToManyField(Tag, verbose_name='Теги', related_name='recipes')
+    cooking_time = models.IntegerField(verbose_name='Время приготовления')
 
     def __str__(self):
-        return 'Рецепт: ' + self.title
+        return self.name
 
 
-class Bookmark(models.Model):
+class Favorite(models.Model):
     """Модель для формирования списка избранных рецептов"""
     user = models.ForeignKey(
         User,
-        related_name='bookmarks',
+        related_name='favorite',
         on_delete=models.CASCADE,
         verbose_name='Пользователь',
     )
     recipes = models.ManyToManyField(
         Recipe,
         verbose_name='Рецепты',
-        related_name='bookmarks',
     )
 
     def __str__(self):
         return 'Закладки пользователя: ' + self.user.get_username()
 
+    class Meta:
+        verbose_name = 'Избранное'
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipes'],
+                name='one_add_per_recipe'
+            )
+        ]
+
 
 class IngredientToRecipe(models.Model):
-    """Модель связи ингредиентов и едениц измерения с рецептом"""
+    """Модель связи ингредиентов с рецептом"""
     recipe = models.ForeignKey(
         Recipe,
         related_name='ingredients',
         on_delete=models.CASCADE,
         verbose_name='Рецепт'
     )
-    ingredient = models.ManyToManyField(
+    ingredient = models.ForeignKey(
         Ingredient,
-        verbose_name='Ингредиент',
-        related_name='recipe'
-    )
-    measure = models.ForeignKey(
-        Measure,
         null=True,
         on_delete=models.SET_NULL,
-        verbose_name='Единица измерения'
+        verbose_name='Ингредиент',
+        related_name='recipe'
     )
     amount = models.IntegerField(verbose_name='Количество')
 
     def __str__(self):
-        return 'Игредиенты рецепта ' + self.recipe.title
+        return 'Ингредиенты рецепта ' + self.recipe.name
 
-#class ShoppingCart(models.Model):
-#    """Модель списка покупок"""
+    class Meta:
+        verbose_name = 'Ингредиенты рецепта'
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'ingredient'],
+                name='one_add_per_ingredient'
+            )
+        ]

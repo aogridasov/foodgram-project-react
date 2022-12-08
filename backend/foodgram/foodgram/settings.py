@@ -1,5 +1,5 @@
 import os
-
+from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +18,9 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'recipes.apps.RecipesConfig',
-    'shopping_cart.apps.ShoppingCartConfig'
+    'shopping_cart.apps.ShoppingCartConfig',
+    'users.apps.UsersConfig',
+    'api.apps.ApiConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -26,6 +28,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'colorfield',
+    'rest_framework',
+    'djoser',
 ]
 
 MIDDLEWARE = [
@@ -67,6 +71,9 @@ DATABASES = {
 }
 
 
+AUTH_USER_MODEL = 'users.User'
+
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -82,6 +89,22 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated'
+    ],
+
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication'
+    ]
+}
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
 LANGUAGE_CODE = 'en-us'
 

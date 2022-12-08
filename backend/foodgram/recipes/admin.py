@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import Bookmark, Ingredient, IngredientToRecipe, Measure, Recipe, Tag
-
+from .models import (Favorite, Ingredient, IngredientToRecipe, Measure, Recipe,
+                     Tag)
 
 admin.site.register(IngredientToRecipe)
 
@@ -16,52 +16,52 @@ class RecipeAdmin(admin.ModelAdmin):
         'pk',
         'author',
         'pub_date',
-        'title',
+        'name',
         'image',
-        'description',
+        'text',
         'cooking_time',
     )
     inlines = [IngredientToRecipeInline, ]
-    filter_horizontal = ('tag',)
-    list_editable = ('title', 'image', 'description', 'cooking_time',)
-    search_fields = ('title', 'description', 'tag', 'cooking_time',)
-    list_filter = ('pub_date', 'tag', 'cooking_time')
+    filter_horizontal = ('tags',)
+    list_editable = ('name', 'image', 'text', 'cooking_time',)
+    search_fields = ('name', 'text', 'tags', 'cooking_time',)
+    list_filter = ('pub_date', 'tags', 'cooking_time')
     empty_value_display = '-пусто-'
 
 
 class IngredientAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
-        'title',
+        'name',
     )
-    list_editable = ('title',)
-    search_fields = ('title',)
+    list_editable = ('name',)
+    search_fields = ('name',)
     empty_value_display = '-пусто-'
 
 
 class MeasureAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
-        'units',
+        'measurement_unit',
     )
-    list_editable = ('units',)
-    search_fields = ('units',)
-    list_filter = ('units',)
+    list_editable = ('measurement_unit',)
+    search_fields = ('measurement_unit',)
+    list_filter = ('measurement_unit',)
     empty_value_display = '-пусто-'
 
 
 class TagAdmin(admin.ModelAdmin):
     list_display = (
         'slug',
-        'title',
-        'hex_code',
+        'name',
+        'color',
     )
-    list_editable = ('title', 'hex_code',)
-    search_fields = ('title',)
+    list_editable = ('name', 'color',)
+    search_fields = ('name',)
     empty_value_display = '-пусто-'
 
 
-class BookmarkAdmin(admin.ModelAdmin):
+class FavoriteAdmin(admin.ModelAdmin):
     list_display = (
         'user',
     )
@@ -74,4 +74,4 @@ admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Measure, MeasureAdmin)
 admin.site.register(Tag, TagAdmin)
-admin.site.register(Bookmark, BookmarkAdmin)
+admin.site.register(Favorite, FavoriteAdmin)
