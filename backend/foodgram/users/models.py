@@ -15,18 +15,32 @@ class User(AbstractUser):
         choices=ROLES,
         default='user'
     )
+    email = models.EmailField(
+        verbose_name='Адрес электронной почты',
+        unique=True
+    )
+    first_name = models.CharField(
+        max_length=10,
+        blank=False,
+    )
+    last_name = models.CharField(
+        max_length=10,
+        blank=False,
+    )
+
+    REQUIRED_FIELDS = ['role', 'email', 'first_name', 'last_name', ]
 
 
 class Subscribe(models.Model):
     """Модель, реализующая подписку на пользователя"""
     user = models.ForeignKey(
         User,
-        related_name='follower',
+        related_name='follows',
         on_delete=models.CASCADE,
     )
     author = models.ForeignKey(
         User,
-        related_name='following',
+        related_name='follower',
         on_delete=models.CASCADE,
     )
 

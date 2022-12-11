@@ -6,7 +6,7 @@ from . import views
 router = routers.DefaultRouter()
 router.register('recipes', views.RecipeViewSet, basename='recipes')
 router.register('ingredients', views.IngredientViewSet, basename='ingredients')
-#router.register('subsc', views.RecipeViewSet, basename='recipes')
+router.register('tags', views.TagViewSet, basename='tags')
 #router.register('recipes', views.RecipeViewSet, basename='recipes')
 #router.register('recipes', views.RecipeViewSet, basename='recipes')
 #router.register('recipes', views.RecipeViewSet, basename='recipes')
@@ -15,7 +15,7 @@ router.register('ingredients', views.IngredientViewSet, basename='ingredients')
 
 
 urlpatterns = [
-    path('/', include(router.urls)),
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt'))
+    path('', include(router.urls)),
+    path('', include('djoser.urls')),
+    path('auth/', include('djoser.urls.authtoken')),
 ]

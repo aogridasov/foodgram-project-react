@@ -72,16 +72,6 @@ class Favorite(models.Model):
     def __str__(self):
         return 'Закладки пользователя: ' + self.user.get_username()
 
-    class Meta:
-        verbose_name = 'Избранное'
-
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'recipes'],
-                name='one_add_per_recipe'
-            )
-        ]
-
 
 class IngredientToRecipe(models.Model):
     """Модель связи ингредиентов с рецептом"""
@@ -105,10 +95,11 @@ class IngredientToRecipe(models.Model):
 
     class Meta:
         verbose_name = 'Ингредиенты рецепта'
+        verbose_name_plural = 'Ингредиенты рецептов'
 
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'ingredient'],
+                fields=['recipe', 'ingredient'],
                 name='one_add_per_ingredient'
             )
         ]
