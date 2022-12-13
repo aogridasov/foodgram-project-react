@@ -47,7 +47,12 @@ class Recipe(models.Model):
     )
     pub_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата публикации')
     name = models.CharField(max_length=256, verbose_name='Название рецепта')
-    image = models.ImageField(verbose_name='Фото рецепта', blank=True, null=True)
+    image = models.ImageField(
+        verbose_name='Фото рецепта',
+        blank=True,
+        null=True,
+        upload_to='recipes/'
+    )
     text = models.TextField(verbose_name='Описание рецепта')
     tags = models.ManyToManyField(Tag, through='TagRecipe')
     cooking_time = models.IntegerField(verbose_name='Время приготовления')
@@ -64,19 +69,15 @@ class Favorite(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Пользователь',
     )
-    recipes = models.ManyToManyField(
+    recipe = models.ForeignKey(
         Recipe,
-        verbose_name='Рецепты',
-        through='RecipeFavorite',
+        verbose_name='Рецепт',
+        related_name='in_favorite',
+        on_delete=models.CASCADE,
     )
 
     def __str__(self):
-        return 'Закладки пользователя: ' + self.user.get_username()
-
-
-class RecipeFavorite(models.Model):
-    favorite = models.ForeignKey(Favorite, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+        return f' {self.user.get_username()} сохранил {self.recipe.name}'
 
 
 class IngredientToRecipe(models.Model):

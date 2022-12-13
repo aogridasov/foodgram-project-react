@@ -66,7 +66,6 @@ class FavoriteAdmin(admin.ModelAdmin):
         'user',
     )
     search_fields = ('user',)
-    filter_horizontal = ('recipes',)
     empty_value_display = '-пусто-'
 
 

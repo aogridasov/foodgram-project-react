@@ -9,6 +9,8 @@ from .serializers import (FavoriteSerializer, IngredientSerializer,
                           RecipeReadOnlySerializer, RecipeCUDSerializer, ShoppingCartSerializer,
                           SubscribeSerializer, TagSerializer, UserSerializer, IngredietToRecipeSerializer)
 
+from django.shortcuts import get_object_or_404
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -44,8 +46,19 @@ class ShoppingCartViewSet(viewsets.ModelViewSet):
 
 
 class FavoriteViewSet(viewsets.ModelViewSet):
-    queryset = Favorite.objects.all()
     serializer_class = FavoriteSerializer
+
+    def get_recipe(self):
+        return get_object_or_404(Recipe, pk=self.kwargs.get('id'))
+
+    def get_queryset(self):
+        return self.get_recipe().in_favorite.all()
+
+    def perform_create(self, serializer):
+        serializer.save(
+            user=self.request.user,
+            recipe=self.get_recipe()
+        )
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

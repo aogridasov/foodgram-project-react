@@ -85,7 +85,8 @@ class RecipeReadOnlySerializer(serializers.ModelSerializer):
             'text',
             'tags',
             'cooking_time',
-            'ingredients'
+            'ingredients',
+            'image',
         )
         read_only_fields = fields
 
@@ -103,7 +104,8 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
             'text',
             'tags',
             'cooking_time',
-            'ingredients'
+            'ingredients',
+            'image',
         )
 
     def to_internal_value(self, data):
@@ -175,7 +177,7 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)
         instance.cooking_time = validated_data.get('cooking_time', instance.cooking_time)
-        #instance.image = validated_data.get('image', instance.image)
+        instance.image = validated_data.get('image', instance.image)
         instance.save()
 
         return instance
@@ -188,9 +190,10 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Favorite
+        fields = ('id', 'user', 'recipe')
+        read_only_fields = fields
 
 
 class SubscribeSerializer(serializers.ModelSerializer):
