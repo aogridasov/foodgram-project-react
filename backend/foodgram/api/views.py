@@ -7,7 +7,7 @@ from users.models import Subscribe, User
 
 from .serializers import (FavoriteSerializer, IngredientSerializer,
                           RecipeReadOnlySerializer, RecipeCUDSerializer, ShoppingCartSerializer,
-                          SubscribeSerializer, TagSerializer, UserSerializer)
+                          SubscribeSerializer, TagSerializer, UserSerializer, IngredietToRecipeSerializer)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -21,18 +21,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
             return RecipeReadOnlySerializer
-        elif self.action in ('create', 'update', 'destroy'):
+        elif self.action in ('create', 'partial_update', 'destroy'):
             return RecipeCUDSerializer
 
     def perform_create(self, serializer):
-        tags = self.request.data.tags
-        ingredients = self.request.data.ingredients
-        author = self.request.user
-        serializer.save(
-            author=author,
-            ingredients=ingredients,
-            tags=tags,
-        )
+        serializer.save(author=self.request.user)
 
 
 class IngredientViewSet(viewsets.ModelViewSet):

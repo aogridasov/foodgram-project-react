@@ -19,7 +19,7 @@ class Measure(models.Model):
     measurement_unit = models.CharField(max_length=10, verbose_name='Единица измерения')
 
     def __str__(self):
-        return str(self.measurement_unit)
+        return self.measurement_unit
 
 
 class Ingredient(models.Model):
@@ -49,7 +49,7 @@ class Recipe(models.Model):
     name = models.CharField(max_length=256, verbose_name='Название рецепта')
     image = models.ImageField(verbose_name='Фото рецепта', blank=True, null=True)
     text = models.TextField(verbose_name='Описание рецепта')
-    tags = models.ManyToManyField(Tag, verbose_name='Теги', related_name='recipes')
+    tags = models.ManyToManyField(Tag, through='TagRecipe')
     cooking_time = models.IntegerField(verbose_name='Время приготовления')
 
     def __str__(self):
@@ -67,10 +67,16 @@ class Favorite(models.Model):
     recipes = models.ManyToManyField(
         Recipe,
         verbose_name='Рецепты',
+        through='RecipeFavorite',
     )
 
     def __str__(self):
         return 'Закладки пользователя: ' + self.user.get_username()
+
+
+class RecipeFavorite(models.Model):
+    favorite = models.ForeignKey(Favorite, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
 
 
 class IngredientToRecipe(models.Model):
@@ -79,6 +85,7 @@ class IngredientToRecipe(models.Model):
         Recipe,
         related_name='ingredients',
         on_delete=models.CASCADE,
+        null=True,
         verbose_name='Рецепт'
     )
     ingredient = models.ForeignKey(
@@ -103,3 +110,8 @@ class IngredientToRecipe(models.Model):
                 name='one_add_per_ingredient'
             )
         ]
+
+
+class TagRecipe(models.Model):
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
