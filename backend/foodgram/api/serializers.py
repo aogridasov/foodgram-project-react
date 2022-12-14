@@ -23,14 +23,17 @@ class UserSerializer(BaseUserSerializer):
 
     def get_is_subscribed(self, obj):
         current_user = self.context['request'].user
-        return obj.follower.filter(id__exact=current_user.id).exists()
+        return obj.follower.filter(user=current_user).exists()
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-
+    measurement_unit = serializers.SerializerMethodField()
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit',)
+        
+    def get_measurement_unit(self, obj):
+        return obj.measurement_unit.measurement_unit
 
 
 class IngredietToRecipeSerializer(serializers.ModelSerializer):
@@ -187,6 +190,8 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingCart
+        fields = ('id', 'user', 'recipe',)
+        read_only_fields = fields
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
@@ -197,6 +202,6 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
 
 class SubscribeSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Subscribe
+        fields = ('author',)

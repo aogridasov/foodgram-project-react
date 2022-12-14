@@ -78,6 +78,14 @@ class Favorite(models.Model):
 
     def __str__(self):
         return f' {self.user.get_username()} сохранил {self.recipe.name}'
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_recipe_favored'
+            )
+        ]
 
 
 class IngredientToRecipe(models.Model):

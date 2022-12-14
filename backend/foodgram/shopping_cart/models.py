@@ -12,10 +12,20 @@ class ShoppingCart(models.Model):
         verbose_name='Пользователь',
         on_delete=models.CASCADE,
     )
-    recipes = models.ManyToManyField(
+    recipe = models.ForeignKey(
         Recipe,
-        verbose_name='Рецепты в списке'
+        verbose_name='Рецепт',
+        related_name='shoppingcart',
+        on_delete=models.CASCADE,
     )
 
     def __str__(self):
-        return 'Список покупок ' + self.user
+        return f'{self.recipe} в списке покупок {self.user}'
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_recipe_addition'
+            )
+        ]
