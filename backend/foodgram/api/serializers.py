@@ -7,6 +7,16 @@ from shopping_cart.models import ShoppingCart
 from users.models import Subscribe, User
 
 
+class CurrentAuthorDefault:
+    requires_context = True
+
+    def __call__(self, serializer_field):
+        return serializer_field.context['view'].kwargs['id']
+
+    def __repr__(self):
+        return '%s()' % self.__class__.__name__
+
+
 class UserSerializer(BaseUserSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
@@ -28,6 +38,7 @@ class UserSerializer(BaseUserSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.SerializerMethodField()
+    
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit',)
@@ -77,6 +88,9 @@ class RecipeReadOnlySerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     ingredients = IngredietToRecipeSerializer(many=True)
     author = UserSerializer()
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
@@ -90,8 +104,86 @@ class RecipeReadOnlySerializer(serializers.ModelSerializer):
             'cooking_time',
             'ingredients',
             'image',
+            'is_favorited',
+            'is_in_shopping_cart',
         )
         read_only_fields = fields
+
+    def get_is_favorited(self, obj):
+        current_user = self.context['request'].user
+        return obj.in_favorite.filter(user=current_user).exists()
+
+    def get_is_in_shopping_cart(self, obj):
+        current_user = self.context['request'].user
+        return obj.shoppingcart.filter(user=current_user).exists()
+    
+    def get_recipes(self, obj):
+        recipes_limit = (
+            self._context['request'].query_params.get('recipes_limit', False)
+        )
+        if recipes_limit:
+            recipes = obj.recipes.all()[:int(recipes_limit)]
+        else:
+            recipes = obj.recipes
+
+        serializer = RecipeMiniSerializer(
+            recipes,
+            many=True,
+            context=self.context
+        )
+        return serializer.data
+
+
+class RecipeMiniSerializer(RecipeReadOnlySerializer):
+    """read-only мини версия отображения рецепта с меньшим кол-вом полей"""
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'id',
+            'name',
+            'image',
+            'cooking_time',
+        )
+
+
+class UserIncludeSerializer(UserSerializer):
+    """Дополнительный сериалайзер пользователя 
+    для использования в других вью / сериалайзерах"""
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+        )
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
+
+    def get_recipes(self, obj):
+        recipes_limit = (
+            self._context['request'].query_params.get('recipes_limit', False)
+        )
+        if recipes_limit:
+            recipes = obj.recipes.all()[:int(recipes_limit)]
+        else:
+            recipes = obj.recipes
+
+        serializer = RecipeMiniSerializer(
+            recipes,
+            many=True,
+            context=self.context
+        )
+        return serializer.data
 
 
 class RecipeCUDSerializer(serializers.ModelSerializer):
@@ -202,6 +294,11 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
 
 class SubscribeSerializer(serializers.ModelSerializer):
+    author = UserSerializer(
+        read_only=True,
+        default=CurrentAuthorDefault(),
+    )
+
     class Meta:
         model = Subscribe
         fields = ('author',)

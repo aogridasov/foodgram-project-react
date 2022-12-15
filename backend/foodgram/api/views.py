@@ -1,11 +1,11 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status, filters
 from .mixins import CreateDestroyViewSet
 
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
-from rest_framework import status
 
 from rest_framework.decorators import action
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 
 from recipes.models import (Favorite, Ingredient, IngredientToRecipe, Measure,
                             Recipe, Tag)
@@ -14,9 +14,13 @@ from users.models import Subscribe, User
 
 from .serializers import (FavoriteSerializer, IngredientSerializer,
                           RecipeReadOnlySerializer, RecipeCUDSerializer, ShoppingCartSerializer,
-                          SubscribeSerializer, TagSerializer, UserSerializer, IngredietToRecipeSerializer)
+                          SubscribeSerializer, TagSerializer, UserSerializer, IngredietToRecipeSerializer,
+                          RecipeMiniSerializer, UserIncludeSerializer)
 
 from django.shortcuts import get_object_or_404
+from django.http import FileResponse
+
+from shopping_cart import pdf_generator
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -26,6 +30,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
+    pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
@@ -36,10 +41,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+"""     def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update(
+            {'is_favorited': self.request.query_params.get('is_favorited', False)},
+        )    
+        context.update(
+            {'is_in_shopping_cart': self.request.query_params.get('is_in_shopping_cart', False)},
+        )    
+            {'author': self.request.query_params.get('author', False)},
+            {'tags': self.request.query_params.get('tags', False)},
+        )
+        return context """
+
 
 class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
 
 
 class SubscribeViewSet(CreateDestroyViewSet):
@@ -62,8 +82,15 @@ class SubscribeViewSet(CreateDestroyViewSet):
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        response = {"msg": "success!"}
-        return Response(response, status=status.HTTP_201_CREATED, headers=headers)
+        response = UserIncludeSerializer(author, context={'request': request})
+        return Response(response.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update(
+            {"recipes_limit": self.request.query_params.get('recipes_limit', False)}
+        )
+        return context
 
     def perform_create(self, serializer):
         serializer.save(
@@ -83,10 +110,18 @@ class SubscribeViewSet(CreateDestroyViewSet):
 
 
 class SubscibtionsListAPIView(ListAPIView):
-    serializer_class = UserSerializer
+    serializer_class = UserIncludeSerializer
+    pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         return User.objects.filter(follower__user=self.request.user)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update(
+            {"recipes_limit": self.request.query_params.get('recipes_limit', False)}
+        )
+        return context
 
 
 class FavoriteViewSet(CreateDestroyViewSet):
@@ -104,13 +139,13 @@ class FavoriteViewSet(CreateDestroyViewSet):
 
         recipe = self.get_recipe()
         if recipe.in_favorite.filter(user=self.request.user).exists():
-            error = {"error": "it was already in favorite"}
+            error = {"errors": "it was already in favorite"}
             return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        response = {"msg": "success!"}
-        return Response(response, status=status.HTTP_201_CREATED, headers=headers)
+        response = RecipeMiniSerializer(recipe, context={'request': request})
+        return Response(response.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(
@@ -125,7 +160,7 @@ class FavoriteViewSet(CreateDestroyViewSet):
         if bookmark.exists():
             bookmark.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        error = {"error": "it was not in favorite"}
+        error = {"errors": "it was not in favorite"}
         return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -144,13 +179,13 @@ class ShoppingCartViewSet(viewsets.ModelViewSet):
 
         recipe = self.get_recipe()
         if recipe.shoppingcart.filter(user=self.request.user).exists():
-            error = {"error": "it was already in shopping cart"}
+            error = {"errors": "it was already in shopping cart"}
             return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        response = {"msg": "success!"}
-        return Response(response, status=status.HTTP_201_CREATED, headers=headers)
+        response = RecipeMiniSerializer(recipe, context={'request': request})
+        return Response(response.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(
@@ -165,16 +200,32 @@ class ShoppingCartViewSet(viewsets.ModelViewSet):
         if shoppingcart.exists():
             shoppingcart.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        error = {"error": "it was not in your shopping cart"}
+        error = {"errors": "it was not in your shopping cart"}
         return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SubscibtionsListAPIView(ListAPIView):
-    serializer_class = UserSerializer
+class ShoppingCartDownloadRetrieveAPIView(RetrieveAPIView):
+    serializer_class = ShoppingCartSerializer
 
-    def get_queryset(self):
-        return User.objects.filter(follower__user=self.request.user)
+    def get_ingredients(self):
+        recipes = Recipe.objects.filter(shoppingcart__user=self.request.user)
+        ingredients_to_recipes = IngredientToRecipe.objects.filter(recipe__in=recipes)
 
+        ingredients = {}
+
+        for link in ingredients_to_recipes:
+            ingredient = link.ingredient
+            if ingredient in ingredients:
+                ingredients[ingredient] += link.amount
+            else:
+                ingredients[ingredient] = link.amount
+
+        return ingredients
+
+    def get(self, request):
+        ingredients = self.get_ingredients()
+        pdf = pdf_generator.generate(ingredients)
+        return FileResponse(pdf, as_attachment=True, filename='test.pdf')
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

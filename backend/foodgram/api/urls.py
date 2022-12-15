@@ -31,8 +31,9 @@ router.register(
 
 
 urlpatterns = [
-    path('', include(router.urls)),
     path(r'users/subscriptions/', views.SubscibtionsListAPIView.as_view(), name='subscriptions'),
+    path(r'recipes/download_shopping_cart/', views.ShoppingCartDownloadRetrieveAPIView.as_view(), name='download_shopping_card'),
+    path('', include(router.urls)),
     path('', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
 ]
