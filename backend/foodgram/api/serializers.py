@@ -1,5 +1,6 @@
-from rest_framework import serializers
 from djoser.serializers import UserSerializer as BaseUserSerializer
+from drf_extra_fields.fields import Base64ImageField
+from rest_framework import serializers
 
 from recipes.models import (Favorite, Ingredient, IngredientToRecipe, Measure,
                             Recipe, Tag, TagRecipe)
@@ -38,11 +39,11 @@ class UserSerializer(BaseUserSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit',)
-        
+
     def get_measurement_unit(self, obj):
         return obj.measurement_unit.measurement_unit
 
@@ -90,7 +91,7 @@ class RecipeReadOnlySerializer(serializers.ModelSerializer):
     author = UserSerializer()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    recipes = serializers.SerializerMethodField()
+    image = Base64ImageField(required=False)
 
     class Meta:
         model = Recipe
@@ -116,22 +117,6 @@ class RecipeReadOnlySerializer(serializers.ModelSerializer):
     def get_is_in_shopping_cart(self, obj):
         current_user = self.context['request'].user
         return obj.shoppingcart.filter(user=current_user).exists()
-    
-    def get_recipes(self, obj):
-        recipes_limit = (
-            self._context['request'].query_params.get('recipes_limit', False)
-        )
-        if recipes_limit:
-            recipes = obj.recipes.all()[:int(recipes_limit)]
-        else:
-            recipes = obj.recipes
-
-        serializer = RecipeMiniSerializer(
-            recipes,
-            many=True,
-            context=self.context
-        )
-        return serializer.data
 
 
 class RecipeMiniSerializer(RecipeReadOnlySerializer):
@@ -148,7 +133,7 @@ class RecipeMiniSerializer(RecipeReadOnlySerializer):
 
 
 class UserIncludeSerializer(UserSerializer):
-    """Дополнительный сериалайзер пользователя 
+    """Дополнительный сериалайзер пользователя
     для использования в других вью / сериалайзерах"""
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
@@ -188,7 +173,11 @@ class UserIncludeSerializer(UserSerializer):
 
 class RecipeCUDSerializer(serializers.ModelSerializer):
     """Сериалайзер для CREATE/PATCH/DELETE запросов к рецептам"""
-    ingredients = IngredietToRecipeSerializer(many=True, read_only=False, required=False)
+    ingredients = IngredietToRecipeSerializer(
+        many=True,
+        read_only=False,
+        required=False
+    )
     tags = TagSerializer(many=True, read_only=False, required=False)
 
     class Meta:
@@ -202,6 +191,21 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
             'ingredients',
             'image',
         )
+
+    def validate_cooking_time(self, value):
+        if not (value >= 1):
+            raise serializers.ValidationError(
+                'Меньше чем за минуту ничего не приготовить :)'
+            )
+        return value
+
+    def validate_name(self, value):
+        length = len(value)
+        if not (0 < length < 200):
+            raise serializers.ValidationError(
+                'Слишком длинное / короткое название!'
+            )
+        return value
 
     def to_internal_value(self, data):
         try:
@@ -261,7 +265,7 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
 
         for ingredient_data in ingredient_to_recipe:
             amount = ingredient_data.pop('amount')
-            amount_update = {'amount': amount} 
+            amount_update = {'amount': amount}
             current_ingredient = Ingredient.objects.get(**ingredient_data)
             IngredientToRecipe.objects.update_or_create(
                 ingredient=current_ingredient,

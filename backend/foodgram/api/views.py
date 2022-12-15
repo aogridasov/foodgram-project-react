@@ -1,26 +1,23 @@
-from rest_framework import viewsets, status, filters
-from .mixins import CreateDestroyViewSet
-
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
-from rest_framework.decorators import action
-from rest_framework.generics import ListAPIView, RetrieveAPIView
-
-from recipes.models import (Favorite, Ingredient, IngredientToRecipe, Measure,
-                            Recipe, Tag)
-from shopping_cart.models import ShoppingCart
-from users.models import Subscribe, User
-
-from .serializers import (FavoriteSerializer, IngredientSerializer,
-                          RecipeReadOnlySerializer, RecipeCUDSerializer, ShoppingCartSerializer,
-                          SubscribeSerializer, TagSerializer, UserSerializer, IngredietToRecipeSerializer,
-                          RecipeMiniSerializer, UserIncludeSerializer)
-
-from django.shortcuts import get_object_or_404
-from django.http import FileResponse
-
+from recipes.models import Ingredient, IngredientToRecipe, Recipe, Tag
 from shopping_cart import pdf_generator
+from users.models import User
+
+from .filters import RecipeFilter
+from .mixins import CreateDestroyViewSet
+from .serializers import (FavoriteSerializer, IngredientSerializer,
+                          RecipeCUDSerializer, RecipeMiniSerializer,
+                          RecipeReadOnlySerializer, ShoppingCartSerializer,
+                          SubscribeSerializer, TagSerializer,
+                          UserIncludeSerializer, UserSerializer)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -31,6 +28,13 @@ class UserViewSet(viewsets.ModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     pagination_class = LimitOffsetPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
+    filterset_fields = (
+        'author__id',
+        'tags__slug',
+        'is_favorited',
+    )
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
@@ -45,12 +49,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context.update(
             {'is_favorited': self.request.query_params.get('is_favorited', False)},
-        )    
+        ),
         context.update(
-            {'is_in_shopping_cart': self.request.query_params.get('is_in_shopping_cart', False)},
-        )    
-            {'author': self.request.query_params.get('author', False)},
-            {'tags': self.request.query_params.get('tags', False)},
+            {'is_in_shopping_cart': self.request.query_params.get(
+                'is_in_shopping_cart', False
+            )
+            },
         )
         return context """
 
