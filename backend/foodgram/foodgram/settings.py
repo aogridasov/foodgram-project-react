@@ -17,10 +17,6 @@ ALLOWED_HOSTS = []
 
 
 INSTALLED_APPS = [
-    'recipes.apps.RecipesConfig',
-    'shopping_cart.apps.ShoppingCartConfig',
-    'users.apps.UsersConfig',
-    'api.apps.ApiConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -32,6 +28,9 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'djoser',
     'django_filters',
+    'users.apps.UsersConfig',
+    'recipes.apps.RecipesConfig',
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -125,3 +124,7 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
+
+
+RECIPES_MODELS_NAMES_LENGTH = 200
+USER_MODELS_FIELD_LENGTH = 150

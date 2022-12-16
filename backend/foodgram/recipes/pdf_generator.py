@@ -6,11 +6,11 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-from foodgram import settings
+from django.conf import settings
 
-#регистрируем кириллицу
+# регистрируем кириллицу
 reportlab.rl_config.TTFSearchPath.append(
-    str(settings.BASE_DIR) + '/shopping_cart/fonts'
+    str(settings.BASE_DIR) + '/recipes/fonts'
 )
 pdfmetrics.registerFont(TTFont('FreeSans', 'FreeSans.ttf'))
 

@@ -1,14 +1,19 @@
 from django.contrib import admin
 
-from .models import (Favorite, Ingredient, IngredientToRecipe, Measure, Recipe,
-                     Tag)
-
-admin.site.register(IngredientToRecipe)
+from .models import (Favorite, Ingredient, IngredientToRecipe, Recipe,
+                     Tag, ShoppingCart, TagRecipe)
 
 
 class IngredientToRecipeInline(admin.StackedInline):
     model = IngredientToRecipe
     extra = 0
+    min_num = 1
+
+
+class TagRecipeInline(admin.StackedInline):
+    model = TagRecipe
+    extra = 0
+    min_num = 1
 
 
 class RecipeAdmin(admin.ModelAdmin):
@@ -17,15 +22,12 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
         'pub_date',
         'name',
-        'image',
-        'text',
-        'cooking_time',
     )
-    inlines = [IngredientToRecipeInline, ]
+    inlines = [IngredientToRecipeInline, TagRecipeInline, ]
     filter_horizontal = ('tags',)
-    list_editable = ('name', 'image', 'text', 'cooking_time',)
-    search_fields = ('name', 'text', 'tags', 'cooking_time',)
-    list_filter = ('pub_date', 'tags', 'cooking_time')
+    list_editable = ('name',)
+    search_fields = ('name',)
+    list_filter = ('pub_date', 'tags', 'cooking_time', 'author',)
     empty_value_display = '-пусто-'
 
 
@@ -36,17 +38,6 @@ class IngredientAdmin(admin.ModelAdmin):
     )
     list_editable = ('name',)
     search_fields = ('name',)
-    empty_value_display = '-пусто-'
-
-
-class MeasureAdmin(admin.ModelAdmin):
-    list_display = (
-        'pk',
-        'measurement_unit',
-    )
-    list_editable = ('measurement_unit',)
-    search_fields = ('measurement_unit',)
-    list_filter = ('measurement_unit',)
     empty_value_display = '-пусто-'
 
 
@@ -71,6 +62,7 @@ class FavoriteAdmin(admin.ModelAdmin):
 
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
-admin.site.register(Measure, MeasureAdmin)
 admin.site.register(Tag, TagAdmin)
 admin.site.register(Favorite, FavoriteAdmin)
+admin.site.register(IngredientToRecipe)
+admin.site.register(ShoppingCart)

@@ -7,8 +7,8 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
-from recipes.models import Ingredient, IngredientToRecipe, Recipe, Tag
-from shopping_cart import pdf_generator
+from recipes.models import Ingredient, IngredientToRecipe, Recipe, Tag, ShoppingCart
+from recipes import pdf_generator
 from users.models import User
 
 from .filters import RecipeFilter
