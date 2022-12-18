@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .models import (Favorite, Ingredient, IngredientToRecipe, Recipe,
-                     Tag, ShoppingCart, TagRecipe)
+                     ShoppingCart, Tag, TagRecipe)
 
 
 class IngredientToRecipeInline(admin.StackedInline):
@@ -22,13 +22,25 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
         'pub_date',
         'name',
+        'get_ingredients',
+        'get_in_favorite_count',
     )
     inlines = [IngredientToRecipeInline, TagRecipeInline, ]
     filter_horizontal = ('tags',)
-    list_editable = ('name',)
     search_fields = ('name',)
     list_filter = ('pub_date', 'tags', 'cooking_time', 'author',)
     empty_value_display = '-пусто-'
+
+    def get_ingredients(self, obj):
+        qs = obj.ingredients.all()
+        return [link.ingredient.name for link in qs]
+
+    get_ingredients.short_description = 'Ингредиенты'
+
+    def get_in_favorite_count(self, obj):
+        return obj.favorite.count()
+
+    get_in_favorite_count.short_description = 'В избранном'
 
 
 class IngredientAdmin(admin.ModelAdmin):
@@ -52,17 +64,9 @@ class TagAdmin(admin.ModelAdmin):
     empty_value_display = '-пусто-'
 
 
-class FavoriteAdmin(admin.ModelAdmin):
-    list_display = (
-        'user',
-    )
-    search_fields = ('user',)
-    empty_value_display = '-пусто-'
-
-
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Tag, TagAdmin)
-admin.site.register(Favorite, FavoriteAdmin)
+admin.site.register(Favorite)
 admin.site.register(IngredientToRecipe)
 admin.site.register(ShoppingCart)

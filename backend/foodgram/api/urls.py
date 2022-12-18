@@ -9,29 +9,12 @@ router.register('recipes', views.RecipeViewSet, basename='recipes')
 router.register('ingredients', views.IngredientViewSet, basename='ingredients')
 router.register('tags', views.TagViewSet, basename='tags')
 router.register(
-    r'recipes/(?P<id>\d+)/favorite',
-    views.FavoriteViewSet,
-    basename='favorite'
+    r'users',
+    views.UserViewSet,
+    basename='users'
 )
-router.register(
-    r'users/(?P<id>\d+)/subscribe',
-    views.SubscribeViewSet,
-    basename='subscribe'
-)
-router.register(
-    r'recipes/(?P<id>\d+)/shopping_cart',
-    views.ShoppingCartViewSet,
-    basename='shopping_cart'
-)
-#router.register('recipes', views.RecipeViewSet, basename='recipes')
-#router.register('recipes', views.RecipeViewSet, basename='recipes')
-#router.register('recipes', views.RecipeViewSet, basename='recipes')
-#router.register('recipes', views.RecipeViewSet, basename='recipes')
-#router.register('recipes', views.RecipeViewSet, basename='recipes')
-
 
 urlpatterns = [
-    path(r'users/subscriptions/', views.SubscibtionsListAPIView.as_view(), name='subscriptions'),
     path(r'recipes/download_shopping_cart/', views.ShoppingCartDownloadRetrieveAPIView.as_view(), name='download_shopping_card'),
     path('', include(router.urls)),
     path('', include('djoser.urls')),

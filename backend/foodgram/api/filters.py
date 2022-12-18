@@ -1,16 +1,23 @@
-import django_filters
+import django_filters.rest_framework as filters
+from django_filters.widgets import CSVWidget
+from rest_framework.filters import SearchFilter
 
-from recipes.models import Recipe
+from recipes.models import Recipe, Tag
 
 
-class RecipeFilter(django_filters.FilterSet):
-    author = django_filters.NumberFilter(
-        field_name='author__id', lookup_expr='iexact'
-    )
-    tags = django_filters.CharFilter(
-        field_name='tags__slug', lookup_expr='iexact'
+class RecipeFilter(filters.FilterSet):
+    is_favorited = filters.BooleanFilter(field_name='is_favorited')
+    is_in_shopping_cart = filters.BooleanFilter(field_name='is_in_shopping_cart')
+    tags = filters.ModelMultipleChoiceFilter(
+        queryset=Tag.objects.all(),
+        field_name='tags__slug',
+        to_field_name='slug',
     )
 
     class Meta:
         model = Recipe
-        fields = ('author', 'tags',)
+        fields = ('is_favorited', 'is_in_shopping_cart', 'tags', 'author',)
+
+
+class IngredientSearchFilter(SearchFilter):
+    search_param = 'name'

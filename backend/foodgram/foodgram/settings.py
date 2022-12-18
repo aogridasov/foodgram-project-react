@@ -5,15 +5,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEV_MODE = (os.getenv('DEV_MODE', default=False) == 'True')
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
 SECRET_KEY = os.getenv('SECRET_KEY', default='very_secret_key')
 
-DEBUG = True
-
-ALLOWED_HOSTS = []
+if DEV_MODE:
+    DEBUG = True
+    ALLOWED_HOSTS = ['*']
+else:
+    DEBUG = False
+    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 
 
 INSTALLED_APPS = [
@@ -98,14 +98,15 @@ REST_FRAMEWORK = {
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication'
-    ]
+    ],
 }
 
 
 DJOSER = {
-    "SERIALIZERS": {
+    'LOGIN_FIELD': 'email',
+    'SERIALIZERS': {
         'current_user': 'api.serializers.UserSerializer',
-        'user': 'api.serializers.UserSerializer'
+        'user': 'api.serializers.UserSerializer',
     }
 }
 
@@ -128,3 +129,7 @@ STATIC_URL = '/static/'
 
 RECIPES_MODELS_NAMES_LENGTH = 200
 USER_MODELS_FIELD_LENGTH = 150
+USER_MODELS_EMAIL_FIELD_LENGTH = 254
+
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

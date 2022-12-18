@@ -1,45 +1,42 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
-ROLES = (
-    ('admin', 'Администратор'),
-    ('user', 'Пользователь')
-)
 
 
 class User(AbstractUser):
     """Модель пользователя"""
-    role = models.CharField(
-        max_length=10,
-        choices=ROLES,
-        default='user'
+    username = models.CharField(
+        max_length=settings.USER_MODELS_FIELD_LENGTH,
+        unique=True,
     )
     email = models.EmailField(
         verbose_name='Адрес электронной почты',
-        unique=True
+        unique=True,
+        max_length=settings.USER_MODELS_EMAIL_FIELD_LENGTH,
     )
     first_name = models.CharField(
-        max_length=10,
-        blank=False,
+        max_length=settings.USER_MODELS_FIELD_LENGTH,
     )
     last_name = models.CharField(
-        max_length=10,
-        blank=False,
+        max_length=settings.USER_MODELS_FIELD_LENGTH,
     )
 
-    REQUIRED_FIELDS = ['role', 'email', 'first_name', 'last_name', ]
+    REQUIRED_FIELDS = [
+        'username', 'first_name', 'last_name',
+    ]
+    USERNAME_FIELD = 'email'
 
 
 class Subscribe(models.Model):
     """Модель, реализующая подписку на пользователя"""
     user = models.ForeignKey(
         User,
-        related_name='follows',
+        related_name='subscribed_to',
         on_delete=models.CASCADE,
     )
     author = models.ForeignKey(
         User,
-        related_name='follower',
+        related_name='subscribed',
         on_delete=models.CASCADE,
     )
 

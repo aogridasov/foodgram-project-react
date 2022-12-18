@@ -2,19 +2,9 @@ from djoser.serializers import UserSerializer as BaseUserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
-from recipes.models import (Favorite, Ingredient, IngredientToRecipe,
-                            Recipe, Tag, TagRecipe, ShoppingCart)
+from recipes.models import (Favorite, Ingredient, IngredientToRecipe, Recipe,
+                            ShoppingCart, Tag, TagRecipe)
 from users.models import Subscribe, User
-
-
-class CurrentAuthorDefault:
-    requires_context = True
-
-    def __call__(self, serializer_field):
-        return serializer_field.context['view'].kwargs['id']
-
-    def __repr__(self):
-        return '%s()' % self.__class__.__name__
 
 
 class UserSerializer(BaseUserSerializer):
@@ -33,60 +23,42 @@ class UserSerializer(BaseUserSerializer):
 
     def get_is_subscribed(self, obj):
         current_user = self.context['request'].user
-        return obj.follower.filter(user=current_user).exists()
+        return obj.subscribed.filter(user=current_user).exists()
+
+        
+        
+        
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    measurement_unit = serializers.SerializerMethodField()
-
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit',)
-
-    def get_measurement_unit(self, obj):
-        return obj.measurement_unit.measurement_unit
 
 
 class IngredietToRecipeSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=False)
     name = serializers.SerializerMethodField()
-    measurement_unit = serializers.SerializerMethodField()
 
     class Meta:
         model = IngredientToRecipe
-        fields = ('id', 'name', 'measurement_unit', 'amount')
-
-    def get_measurement_unit(self, obj):
-        return obj.ingredient.measurement_unit.measurement_unit
+        fields = ('id', 'name', 'amount')
 
     def get_name(self, obj):
         return obj.ingredient.name
 
 
 class TagSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=False)
-    name = serializers.SerializerMethodField()
-    color = serializers.SerializerMethodField()
-    slug = serializers.SerializerMethodField()
 
     class Meta:
         model = Tag
         fields = ('id', 'name', 'color', 'slug',)
 
-    def get_name(self, obj):
-        return obj.name
-
-    def get_color(self, obj):
-        return obj.color
-
-    def get_slug(self, obj):
-        return obj.slug
-
 
 class RecipeReadOnlySerializer(serializers.ModelSerializer):
     """Сериалайзер для чтения одного / списка рецептов"""
     tags = TagSerializer(many=True)
-    ingredients = IngredietToRecipeSerializer(many=True)
+    ingredients = serializers.SerializerMethodField()
     author = UserSerializer()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -109,9 +81,13 @@ class RecipeReadOnlySerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    def get_ingredients(self, obj):
+        ingredients = Ingredient.objects.filter(recipe__recipe=obj).distinct()
+        return IngredientSerializer(ingredients, many=True).data
+
     def get_is_favorited(self, obj):
         current_user = self.context['request'].user
-        return obj.in_favorite.filter(user=current_user).exists()
+        return obj.favorite.filter(user=current_user).exists()
 
     def get_is_in_shopping_cart(self, obj):
         current_user = self.context['request'].user
@@ -157,10 +133,9 @@ class UserIncludeSerializer(UserSerializer):
         recipes_limit = (
             self._context['request'].query_params.get('recipes_limit', False)
         )
+        recipes = obj.recipes
         if recipes_limit:
-            recipes = obj.recipes.all()[:int(recipes_limit)]
-        else:
-            recipes = obj.recipes
+            recipes = recipes[:int(recipes_limit)]
 
         serializer = RecipeMiniSerializer(
             recipes,
@@ -174,10 +149,14 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
     """Сериалайзер для CREATE/PATCH/DELETE запросов к рецептам"""
     ingredients = IngredietToRecipeSerializer(
         many=True,
-        read_only=False,
-        required=False
     )
-    tags = TagSerializer(many=True, read_only=False, required=False)
+    tags = serializers.PrimaryKeyRelatedField(
+        many=True, 
+        read_only=False,
+        queryset=Tag.objects.all()
+    )
+    image = Base64ImageField(required=False)
+    author = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
@@ -189,7 +168,17 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
             'cooking_time',
             'ingredients',
             'image',
+            'author',
         )
+
+    def get_author(self, obj):
+        current_user = self.context['request'].user
+        serializer = UserIncludeSerializer(
+            current_user,
+            context={'request': self.context['request']})
+        serializer.data.pop('recipes')
+        serializer.data.pop('recipes_count')
+        return serializer.data
 
     def validate_cooking_time(self, value):
         if not (value >= 1):
@@ -206,42 +195,13 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def to_internal_value(self, data):
-        try:
-            tags_id = data['tags']
-            tags = []
-            for tag_id in tags_id:
-                tag = {'id': tag_id}
-                tags.append(tag)
-            data['tags'] = tags
-        except KeyError:
-            pass
-
-        try:
-            ingredients = []
-            for ingredient_data in data['ingredients']:
-                ingredient_id = ingredient_data['id']
-                amount = ingredient_data['amount']
-
-                ingredient_amount_json = {}
-                ingredient_amount_json['id'] = ingredient_id
-                ingredient_amount_json['amount'] = amount
-
-                ingredients.append(ingredient_amount_json)
-            data['ingredients'] = ingredients
-        except KeyError:
-            pass
-
-        return super(RecipeCUDSerializer, self).to_internal_value(data)
-
     def create(self, validated_data):
         tags = validated_data.pop('tags')
         ingredient_to_recipe = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(**validated_data)
 
         for tag in tags:
-            current_tag = Tag.objects.get(**tag)
-            TagRecipe.objects.create(tag=current_tag, recipe=recipe)
+            TagRecipe.objects.create(tag=tag, recipe=recipe)
 
         for ingredient_data in ingredient_to_recipe:
             amount = ingredient_data.pop('amount')
@@ -299,7 +259,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
 class SubscribeSerializer(serializers.ModelSerializer):
     author = UserSerializer(
         read_only=True,
-        default=CurrentAuthorDefault(),
+        #default=CurrentAuthorDefault(),
     )
 
     class Meta:
