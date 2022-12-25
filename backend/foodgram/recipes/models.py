@@ -73,7 +73,7 @@ class Recipe(models.Model):
     image = models.ImageField(
         blank=True,
         null=True,
-        upload_to='recipes/',
+        upload_to='recipes/images/',
         verbose_name='Фото рецепта',
     )
     text = models.TextField(verbose_name='Описание рецепта')
@@ -144,6 +144,13 @@ class TagRecipe(models.Model):
 
     class Meta:
         verbose_name = 'Связь тега и рецепта'
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'tag'],
+                name='one_add_per_ingredient'
+            )
+        ]
 
 
 class UserRecipeLink(models.Model):

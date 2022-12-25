@@ -28,7 +28,9 @@ class RecipeAdmin(admin.ModelAdmin):
     inlines = [IngredientToRecipeInline, TagRecipeInline, ]
     filter_horizontal = ('tags',)
     search_fields = ('name',)
-    list_filter = ('pub_date', 'tags', 'cooking_time', 'author',)
+    list_filter = (
+        'pub_date', 'tags', 'cooking_time', 'author', 'name',
+    )
     empty_value_display = '-пусто-'
 
     def get_ingredients(self, obj):
@@ -47,9 +49,11 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
         'name',
+        'measurement_unit',
     )
-    list_editable = ('name',)
-    search_fields = ('name',)
+    list_editable = ('name', 'measurement_unit',)
+    search_fields = ('name', 'measurement_unit',)
+    list_filter = ('name',)
     empty_value_display = '-пусто-'
 
 

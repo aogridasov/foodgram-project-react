@@ -19,7 +19,7 @@ def parse_data(data):
     for key, value in data.items():
         pdf_string = [
             key.name,
-            key.measurement_unit.measurement_unit,
+            key.measurement_unit,
             value,
         ]
         parsed_data.append(pdf_string)
@@ -33,20 +33,20 @@ def generate(data):
     file.setFont('FreeSans', 15, leading=None)
     file.drawString(200, 800, 'Foodgram by Anton Gridasov')
     file.line(0, 780, 1000, 780)
-    file.drawString(200, 700, 'Список покупок:')
+    file.drawString(200, 750, 'Список покупок:')
 
-    persed_data = parse_data(data)
+    parsed_data = parse_data(data)
     x = 100
-    y = 625
+    y = 660
 
-    for string in persed_data:
+    for string in parsed_data:
         file.setFont('FreeSans', 10, leading=None)
         file.drawString(
             x,
             y,
             f'- {string[0]} ({string[1]}) - {str(string[2])}'
         )
-        y += 30
+        y += 15
 
     file.showPage()
     file.save()

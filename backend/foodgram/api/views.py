@@ -1,31 +1,30 @@
+from django.db.models import Exists, OuterRef
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
-from api.filters import RecipeFilter, IngredientSearchFilter
-from api.mixins import CreateDestroyViewSet
+from api.filters import IngredientSearchFilter, RecipeFilter
 from api.serializers import (FavoriteSerializer, IngredientSerializer,
                              RecipeCUDSerializer, RecipeMiniSerializer,
                              RecipeReadOnlySerializer, ShoppingCartSerializer,
                              SubscribeSerializer, TagSerializer,
                              UserIncludeSerializer, UserSerializer)
 from recipes import pdf_generator
-from recipes.models import (Ingredient, IngredientToRecipe, Recipe,
-                            ShoppingCart, Tag, Favorite)
+from recipes.models import (Favorite, Ingredient, IngredientToRecipe, Recipe,
+                            ShoppingCart, Tag)
 from users.models import User
-from rest_framework import permissions
-from django.db.models import Exists, OuterRef
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     pagination_class = LimitOffsetPagination
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -83,6 +82,19 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+class UserSelfViewSet(RetrieveAPIView):
+    """Кастомный вьюсет для доступа к эндпоинту api/users/me
+    Перезаписаны права доступа относительно версии Djoser"""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_object(self):
+        obj = self.request.user
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+
 class RecipeViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
@@ -90,6 +102,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
 
     def get_queryset(self):
+        if self.request.user.is_anonymous:
+            return Recipe.objects.all()
+
         user_favorited = Favorite.objects.filter(
             recipe=OuterRef('pk'),
             user=self.request.user,
@@ -104,8 +119,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ).annotate(
             is_in_shopping_cart=Exists(user_shoppingcart)
         )
-        x = queryset[0]
-        x2 = queryset[1]
         return queryset
 
     def get_serializer_class(self):
@@ -140,38 +153,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def favorite(self, request, pk=None):
-        serializer = FavoriteSerializer(data=request.data)
+        serializer = FavoriteSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        recipe = get_object_or_404(self.queryset, pk=pk)
+        recipe = get_object_or_404(Recipe, pk=pk)
         in_favorite = recipe.favorite.filter(user=self.request.user)
 
         return self.create_recipe_link(recipe, in_favorite, request, serializer)
 
     @favorite.mapping.delete
     def delete_from_favorite(self, request, pk=None):
-        serializer = FavoriteSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        recipe = get_object_or_404(self.queryset, pk=pk)
+        recipe = get_object_or_404(Recipe, pk=pk)
         in_favorite = recipe.favorite.filter(user=self.request.user)
-
         return self.delete_recipe_link(in_favorite)
 
     @action(detail=True, methods=['post'])
     def shopping_cart(self, request, pk=None):
-        serializer = ShoppingCartSerializer(data=request.data)
+        serializer = ShoppingCartSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        recipe = get_object_or_404(self.queryset, pk=pk)
+        recipe = get_object_or_404(Recipe, pk=pk)
         in_shoppingcart = recipe.shoppingcart.filter(user=self.request.user)
-
         return self.create_recipe_link(recipe, in_shoppingcart, request, serializer)
 
     @shopping_cart.mapping.delete
     def delete_from_shopping_cart(self, request, pk=None):
-        serializer = ShoppingCartSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        recipe = get_object_or_404(self.queryset, pk=pk)
+        recipe = get_object_or_404(Recipe, pk=pk)
         in_shoppingcart = recipe.shoppingcart.filter(user=self.request.user)
-
         return self.delete_recipe_link(in_shoppingcart)
 
 

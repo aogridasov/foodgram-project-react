@@ -15,8 +15,17 @@ router.register(
 )
 
 urlpatterns = [
-    path(r'recipes/download_shopping_cart/', views.ShoppingCartDownloadRetrieveAPIView.as_view(), name='download_shopping_card'),
-    path('', include(router.urls)),
+    path(
+        r'users/me/',
+        views.UserSelfViewSet.as_view(),
+        name='users-me'
+    ),
     path('', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
+    path(
+        r'recipes/download_shopping_cart/',
+        views.ShoppingCartDownloadRetrieveAPIView.as_view(),
+        name='download_shopping_card'
+    ),
+    path('', include(router.urls)),
 ]
