@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEV_MODE = (os.getenv('DEV_MODE', default=False) == 'True')
+DB_IS_SQLITE = (os.getenv('DEV_MODE', default=False) == 'True')
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.getenv('SECRET_KEY', default='very_secret_key')
 
@@ -64,7 +65,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 
-if DEV_MODE:
+if DB_IS_SQLITE:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -117,7 +118,7 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'PERMISSIONS': {
-        'user': ['rest_framework.permissions.IsAuthenticatedOrReadOnly'],
+        'user': ['rest_framework.permissions.IsAuthenticated'],
         'user_list': ['rest_framework.permissions.IsAuthenticatedOrReadOnly'],
     },
     'LOGIN_FIELD': 'email',

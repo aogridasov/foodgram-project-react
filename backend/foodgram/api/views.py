@@ -17,7 +17,7 @@ from api.serializers import (FavoriteSerializer, IngredientSerializer,
 from recipes import pdf_generator
 from recipes.models import (Favorite, Ingredient, IngredientToRecipe, Recipe,
                             ShoppingCart, Tag)
-from users.models import User
+from users.models import Subscribe, User
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -25,13 +25,6 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     pagination_class = LimitOffsetPagination
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update(
-            {"recipes_limit": self.request.query_params.get('recipes_limit', False)}
-        )
-        return context
 
     @action(detail=True, methods=['post', 'delete'])
     def subscribe(self, request, pk=None):
@@ -43,7 +36,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         if request.stream.method == 'POST':
             if subscription.exists():
-                error = {"error": "already subscribed"}
+                error = {'error': 'already subscribed'}
                 return Response(error, status=status.HTTP_400_BAD_REQUEST)
             serializer.save(
                 user=self.request.user,
@@ -57,11 +50,8 @@ class UserViewSet(viewsets.ModelViewSet):
                 response.data, status=status.HTTP_201_CREATED, headers=headers
             )
 
-        if subscription.exists():
-            subscription.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        error = {"error": "you are not subscribed"}
-        return Response(error, status=status.HTTP_400_BAD_REQUEST)
+        get_object_or_404(Subscribe, author=author, user=self.request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False)
     def subscriptions(self, request):
@@ -70,29 +60,16 @@ class UserViewSet(viewsets.ModelViewSet):
         )
         page = self.paginate_queryset(subscribtions)
 
-        if page is not None:
+        if not page:
             serializer = UserIncludeSerializer(
-                page, many=True, context={'request': request}
+                subscribtions, many=True, context={'request': request}
             )
-            return self.get_paginated_response(serializer.data)
+            return Response(serializer.data)
 
         serializer = UserIncludeSerializer(
-            subscribtions, many=True, context={'request': request}
+            page, many=True, context={'request': request}
         )
-        return Response(serializer.data)
-
-
-class UserSelfViewSet(RetrieveAPIView):
-    """Кастомный вьюсет для доступа к эндпоинту api/users/me
-    Перезаписаны права доступа относительно версии Djoser"""
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def get_object(self):
-        obj = self.request.user
-        self.check_object_permissions(self.request, obj)
-        return obj
+        return self.get_paginated_response(serializer.data)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -145,11 +122,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def delete_recipe_link(link):
-        if link.exists():
-            link.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        error = {"error": "recipe is not added"}
-        return Response(error, status=status.HTTP_400_BAD_REQUEST)
+        link.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'])
     def favorite(self, request, pk=None):
@@ -157,13 +131,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         recipe = get_object_or_404(Recipe, pk=pk)
         in_favorite = recipe.favorite.filter(user=self.request.user)
-
         return self.create_recipe_link(recipe, in_favorite, request, serializer)
 
     @favorite.mapping.delete
     def delete_from_favorite(self, request, pk=None):
         recipe = get_object_or_404(Recipe, pk=pk)
-        in_favorite = recipe.favorite.filter(user=self.request.user)
+        in_favorite = get_object_or_404(
+            Favorite, recipe=recipe, user=self.request.user
+        )
         return self.delete_recipe_link(in_favorite)
 
     @action(detail=True, methods=['post'])
@@ -177,31 +152,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @shopping_cart.mapping.delete
     def delete_from_shopping_cart(self, request, pk=None):
         recipe = get_object_or_404(Recipe, pk=pk)
-        in_shoppingcart = recipe.shoppingcart.filter(user=self.request.user)
+        in_shoppingcart = get_object_or_404(
+            ShoppingCart, recipe=recipe, user=self.request.user
+        )
         return self.delete_recipe_link(in_shoppingcart)
 
-
-class ShoppingCartDownloadRetrieveAPIView(RetrieveAPIView):
-    serializer_class = ShoppingCartSerializer
-
-    def get_ingredients(self):
+    @action(detail=False)
+    def download_shopping_cart(self, request):
         recipes = Recipe.objects.filter(shoppingcart__user=self.request.user)
         ingredients_to_recipes = IngredientToRecipe.objects.filter(recipe__in=recipes)
-
-        ingredients = {}
-
-        for link in ingredients_to_recipes:
-            ingredient = link.ingredient
-            if ingredient in ingredients:
-                ingredients[ingredient] += link.amount
-            else:
-                ingredients[ingredient] = link.amount
-
-        return ingredients
-
-    def get(self, request):
-        ingredients = self.get_ingredients()
-        pdf = pdf_generator.generate(ingredients)
+        pdf = pdf_generator.generate(ingredients_to_recipes)
         return FileResponse(pdf, as_attachment=True, filename='test.pdf')
 
 

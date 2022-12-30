@@ -34,8 +34,7 @@ class RecipeAdmin(admin.ModelAdmin):
     empty_value_display = '-пусто-'
 
     def get_ingredients(self, obj):
-        qs = obj.ingredients.all()
-        return [link.ingredient.name for link in qs]
+        return [link.ingredient.name for link in obj.ingredients.all()]
 
     get_ingredients.short_description = 'Ингредиенты'
 

@@ -14,9 +14,17 @@ reportlab.rl_config.TTFSearchPath.append(
 pdfmetrics.registerFont(TTFont('FreeSans', 'FreeSans.ttf'))
 
 
-def parse_data(data):
+def parse_data(ingredients_to_recipes):
+    ingredients = {}
+    for link in ingredients_to_recipes:
+        ingredient = link.ingredient
+        if ingredient in ingredients:
+            ingredients[ingredient] += link.amount
+        else:
+            ingredients[ingredient] = link.amount
+
     parsed_data = []
-    for key, value in data.items():
+    for key, value in ingredients.items():
         pdf_string = [
             key.name,
             key.measurement_unit,
@@ -26,7 +34,7 @@ def parse_data(data):
     return parsed_data
 
 
-def generate(data):
+def generate(ingredients_to_recipes):
     buffer = io.BytesIO()
     file = canvas.Canvas(buffer, pagesize=A4)
 
@@ -35,7 +43,7 @@ def generate(data):
     file.line(0, 780, 1000, 780)
     file.drawString(200, 750, 'Список покупок:')
 
-    parsed_data = parse_data(data)
+    parsed_data = parse_data(ingredients_to_recipes)
     x = 100
     y = 660
 

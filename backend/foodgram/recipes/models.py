@@ -171,28 +171,27 @@ class UserRecipeLink(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_user_recipe_link'
+                name=f'{__name__}_unique_user_recipe_link'
             )
         ]
 
 
 class Favorite(UserRecipeLink):
     """Модель для формирования списка избранных рецептов"""
-
-    def __str__(self):
-        return f' {self.user.get_username()} сохранил {self.recipe.name}'
-
     class Meta(UserRecipeLink.Meta):
         verbose_name = 'В избранном'
         default_related_name = 'favorite'
+
+    def __str__(self):
+        return f' {self.user.get_username()} сохранил {self.recipe.name}'
 
 
 class ShoppingCart(UserRecipeLink):
     """Модель для формирования списка покупок"""
 
-    def __str__(self):
-        return f' {self.user.get_username()} добавил в покупки {self.recipe.name}'
-
     class Meta(UserRecipeLink.Meta):
         verbose_name = 'В списке покупок'
         default_related_name = 'shoppingcart'
+
+    def __str__(self):
+        return f' {self.user.get_username()} добавил в покупки {self.recipe.name}'
