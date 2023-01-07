@@ -128,9 +128,6 @@ DJOSER = {
     }
 }
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -143,6 +140,10 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 RECIPES_MODELS_NAMES_LENGTH = 200
@@ -150,4 +151,4 @@ USER_MODELS_FIELD_LENGTH = 150
 USER_MODELS_EMAIL_FIELD_LENGTH = 254
 
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+#DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
