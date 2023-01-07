@@ -116,7 +116,7 @@ class IngredientToRecipe(models.Model):
     )
 
     def __str__(self):
-        return f'{self.ingredient} в {self.recipe.name}'
+        return f'{self.ingredient} в {self.recipe}'
 
     class Meta:
         verbose_name = 'Ингредиенты рецепта'
@@ -148,7 +148,7 @@ class TagRecipe(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['recipe', 'tag'],
-                name='one_add_per_ingredient'
+                name='one_add_per_tag'
             )
         ]
 
@@ -171,7 +171,7 @@ class UserRecipeLink(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name=f'{__name__}_unique_user_recipe_link'
+                name='%(class)s_unique_user_recipe_link'
             )
         ]
 
