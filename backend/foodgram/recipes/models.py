@@ -43,13 +43,6 @@ class Ingredient(models.Model):
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
 
-        constraints = [
-            models.UniqueConstraint(
-                fields=['name', 'measurement_unit'],
-                name='unique_measurement unit'
-            )
-        ]
-
     def __str__(self):
         return f'{self.name}({self.measurement_unit})'
 
@@ -171,7 +164,7 @@ class UserRecipeLink(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='%(class)s_unique_user_recipe_link'
+                name='%(app_label)s_%(class)s_unique_user_recipe_link'
             )
         ]
 
@@ -194,4 +187,4 @@ class ShoppingCart(UserRecipeLink):
         default_related_name = 'shoppingcart'
 
     def __str__(self):
-        return f' {self.user.get_username()} добавил в покупки {self.recipe.name}'
+        return f' {self.user.get_username()} добавил {self.recipe.name}'
