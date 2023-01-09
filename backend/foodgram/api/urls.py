@@ -9,23 +9,18 @@ router.register('recipes', views.RecipeViewSet, basename='recipes')
 router.register('ingredients', views.IngredientViewSet, basename='ingredients')
 router.register('tags', views.TagViewSet, basename='tags')
 router.register(
-    r'users',
+    'users',
     views.UserViewSet,
     basename='users'
 )
 
 urlpatterns = [
-    #path(
-    #    r'users/me/',
-    #    views.UserSelfViewSet.as_view(),
-    #    name='users-me'
-    #),
+    path(
+        r'users/subscriptions/',
+        views.UserViewSet.as_view({'get': 'subscriptions'}),
+        name='subscriptions'
+    ),
     path('', include('djoser.urls')),
     path('', include(router.urls)),
     path('auth/', include('djoser.urls.authtoken')),
-    #path(
-    #    r'recipes/download_shopping_cart/',
-    #    views.ShoppingCartDownloadRetrieveAPIView.as_view(),
-    #    name='download_shopping_card'
-    #),
 ]

@@ -4,7 +4,6 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
@@ -26,34 +25,34 @@ class UserViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
-    @action(detail=True, methods=['post', 'delete'])
+    @action(detail=True, methods=['post'])
     def subscribe(self, request, pk=None):
         serializer = SubscribeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         author = get_object_or_404(self.queryset, pk=pk)
         subscription = author.subscribed.filter(user=self.request.user)
+        if subscription.exists() or author == self.request.user:
+            error = {'error': 'can not subscribe'}
+            return Response(error, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save(
+            user=self.request.user,
+            author=author
+        )
+        headers = self.get_success_headers(serializer.data)
+        response = UserIncludeSerializer(
+            author, context={'request': request}
+        )
+        return Response(
+            response.data, status=status.HTTP_201_CREATED, headers=headers
+        )
 
-        if request.stream.method == 'POST':
-            if subscription.exists():
-                error = {'error': 'already subscribed'}
-                return Response(error, status=status.HTTP_400_BAD_REQUEST)
-            serializer.save(
-                user=self.request.user,
-                author=author
-            )
-            headers = self.get_success_headers(serializer.data)
-            response = UserIncludeSerializer(
-                author, context={'request': request}
-            )
-            return Response(
-                response.data, status=status.HTTP_201_CREATED, headers=headers
-            )
-
+    @subscribe.mapping.delete
+    def unsubscribe(self, request, pk=None):
+        author = get_object_or_404(self.queryset, pk=pk)
         get_object_or_404(Subscribe, author=author, user=self.request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False)
+    @action(detail=False, methods=['get'])
     def subscriptions(self, request):
         subscribtions = self.queryset.filter(
             subscribed__user=self.request.user

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEV_MODE = (os.getenv('DEV_MODE', default=False) == 'True')
-DB_IS_SQLITE = (os.getenv('DB_IS_SQLITE', default=False) == 'True')
+DB_IS_SQLITE = (os.getenv('DEV_MODE', default=False) == 'True')
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.getenv('SECRET_KEY', default='very_secret_key')
 
