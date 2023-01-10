@@ -53,5 +53,5 @@ jobs:
           echo PROD_SERVER_IP=${{ secrets.PROD_SERVER_IP }} >> .env
           echo PROD_SERVER_ADRESS=${{ secrets.PROD_SERVER_ADRESS }} >> .env
           echo DEV_MODE=${{ secrets.DEV_MODE }} >> .env
-          echo DEV_MODE=${{ secrets.DB_IS_SQLITE }} >> .env
+          echo DB_IS_SQLITE=${{ secrets.DB_IS_SQLITE }} >> .env
           sudo docker-compose up -d
