@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from api.filters import IngredientSearchFilter, RecipeFilter
@@ -19,10 +19,14 @@ from recipes.models import (Favorite, Ingredient, IngredientToRecipe, Recipe,
 from users.models import Subscribe, User
 
 
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size_query_param = 'limit'
+
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    pagination_class = LimitOffsetPagination
+    pagination_class = CustomPageNumberPagination
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     @action(detail=True, methods=['post'])
@@ -72,10 +76,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    pagination_class = LimitOffsetPagination
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
+    pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
         if self.request.user.is_anonymous:
