@@ -177,6 +177,7 @@ class Favorite(UserRecipeLink):
     """Модель для формирования списка избранных рецептов"""
     class Meta(UserRecipeLink.Meta):
         verbose_name = 'В избранном'
+        verbose_name_plural = 'В избранном'
         default_related_name = 'favorite'
 
 
@@ -185,4 +186,5 @@ class ShoppingCart(UserRecipeLink):
 
     class Meta(UserRecipeLink.Meta):
         verbose_name = 'В списке покупок'
+        verbose_name_plural = 'В списке покупок'
         default_related_name = 'shoppingcart'
