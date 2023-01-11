@@ -42,6 +42,7 @@ jobs:
         script: |
           sudo docker-compose stop
           sudo docker-compose rm web
+          sudo docker image rm aogridasov/foodgram
           sudo rm .env
           touch .env
           echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
