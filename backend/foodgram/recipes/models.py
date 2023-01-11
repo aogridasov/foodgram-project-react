@@ -169,15 +169,15 @@ class UserRecipeLink(models.Model):
             )
         ]
 
+    def __str__(self):
+        return f' {self.user.get_username()} добавил {self.recipe.name} в {self.__class__.__name__}'
+
 
 class Favorite(UserRecipeLink):
     """Модель для формирования списка избранных рецептов"""
     class Meta(UserRecipeLink.Meta):
         verbose_name = 'В избранном'
         default_related_name = 'favorite'
-
-    def __str__(self):
-        return f' {self.user.get_username()} сохранил {self.recipe.name}'
 
 
 class ShoppingCart(UserRecipeLink):
@@ -186,6 +186,3 @@ class ShoppingCart(UserRecipeLink):
     class Meta(UserRecipeLink.Meta):
         verbose_name = 'В списке покупок'
         default_related_name = 'shoppingcart'
-
-    def __str__(self):
-        return f' {self.user.get_username()} добавил {self.recipe.name}'
