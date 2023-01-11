@@ -23,7 +23,7 @@ class UserSerializer(DjoserUserSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        if (not request) or request.user.is_anonymous:
+        if not request or request.user.is_anonymous:
             return False
         return obj.subscribed.filter(user=request.user).exists()
 
@@ -97,13 +97,13 @@ class RecipeReadOnlySerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
-        if (not request) or request.user.is_anonymous:
+        if not request or request.user.is_anonymous:
             return False
         return obj.favorite.filter(user=request.user).exists()
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
-        if (not request) or request.user.is_anonymous:
+        if not request or request.user.is_anonymous:
             return False
         return obj.shoppingcart.filter(user=request.user).exists()
 
@@ -189,14 +189,16 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Кастомная валидация для PATCH запроса"""
-        required_fields = (
+        required_fields = [
             'name',
             'text',
             'tags',
             'cooking_time',
             'ingredients',
-            'image',
-        )
+        ]
+        if self.context['request'].method == 'POST':
+            required_fields.append('image')
+
         for field in required_fields:
             if not (data.get(field)):
                 raise serializers.ValidationError('Не все поля заполнены!')
@@ -211,20 +213,20 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
         return value
 
     def validate_ingredients(self, value):
+        recipe_ingredients = []
         for ingredient in value:
-            counter = 0
-            for dict in value:
-                if dict['id'] == ingredient['id']:
-                    counter += 1
-                    if counter > 1:
-                        raise serializers.ValidationError(
-                            'Ингредиенты не должны повторяться!'
-                        )
-                amount = dict.get('amount')
-                if (not amount) or amount < 1:
-                    raise serializers.ValidationError(
-                        'Введите количество ингредиента!'
-                    )
+            id = ingredient.get('id')
+            if id in recipe_ingredients:
+                raise serializers.ValidationError(       
+                    'Ингредиенты не должны повторяться!'
+                )
+            recipe_ingredients.append(id)
+
+            amount = ingredient.get('amount')
+            if (not amount) or amount < 1:
+                raise serializers.ValidationError(
+                    'Введите количество ингредиента!'
+                )
         return value
 
     def validate_cooking_time(self, value):
