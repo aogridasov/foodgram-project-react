@@ -41,8 +41,6 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script: |
           sudo docker-compose stop
-          sudo docker-compose rm web
-          sudo docker image rm aogridasov/foodgram
           sudo rm .env
           touch .env
           echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
@@ -55,4 +53,6 @@ jobs:
           echo PROD_SERVER_ADRESS=${{ secrets.PROD_SERVER_ADRESS }} >> .env
           echo DEV_MODE=${{ secrets.DEV_MODE }} >> .env
           echo DB_IS_SQLITE=${{ secrets.DB_IS_SQLITE }} >> .env
+          sudo docker container rm agridasov_web_1
+          sudo docker image rm aogridasov/foodgram
           sudo docker-compose up -d
