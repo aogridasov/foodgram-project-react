@@ -55,6 +55,7 @@ jobs:
           echo DB_IS_SQLITE=${{ secrets.DB_IS_SQLITE }} >> .env
           chmod +x init-letsencrypt.sh
           sudo ./init-letsencrypt.sh
+          sudo docker-compose down
           sudo docker container rm agridasov_web_1
           sudo docker image rm aogridasov/foodgram
           sudo docker-compose up -d
