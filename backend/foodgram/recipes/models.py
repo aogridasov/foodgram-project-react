@@ -183,7 +183,6 @@ class Favorite(UserRecipeLink):
 
 class ShoppingCart(UserRecipeLink):
     """Модель для формирования списка покупок"""
-
     class Meta(UserRecipeLink.Meta):
         verbose_name = 'В списке покупок'
         verbose_name_plural = 'В списке покупок'

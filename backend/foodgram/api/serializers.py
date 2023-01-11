@@ -1,3 +1,5 @@
+from django.shortcuts import get_object_or_404
+
 from djoser.serializers import UserSerializer as DjoserUserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
@@ -217,7 +219,7 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
         for ingredient in value:
             id = ingredient.get('id')
             if id in recipe_ingredients:
-                raise serializers.ValidationError(       
+                raise serializers.ValidationError(
                     'Ингредиенты не должны повторяться!'
                 )
             recipe_ingredients.append(id)
@@ -279,24 +281,56 @@ class RecipeCUDSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class ShoppingCartSerializer(serializers.ModelSerializer):
+class RecipeLinkSerializer(serializers.ModelSerializer):
+    """Абстрактный сериалайзер для связи рецепта и пользователя"""
+    def validate(self, data):
+        recipe = get_object_or_404(
+            Recipe,
+            pk=self.initial_data['recipe']
+        )
+        user = self.context['request'].user
+        model = self.__class__.Meta.model
+        if model.objects.filter(
+            recipe=recipe,
+            user=user
+        ).exists():
+            raise serializers.ValidationError(
+                'Уже добавлено!'
+            )
+        return data
 
+
+class FavoriteSerializer(RecipeLinkSerializer):
+    class Meta:
+        model = Favorite
+        fields = ('id', 'user', 'recipe',)
+        read_only_fields = fields
+
+
+class ShoppingCartSerializer(RecipeLinkSerializer):
     class Meta:
         model = ShoppingCart
         fields = ('id', 'user', 'recipe',)
         read_only_fields = fields
 
 
-class FavoriteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Favorite
-        fields = ('id', 'user', 'recipe')
-        read_only_fields = fields
-
-
 class SubscribeSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Subscribe
         fields = ('id', 'author', 'user')
         read_only_fields = fields
+
+    def validate(self, data):
+        author = self.context['author']
+        user = self.context['request'].user
+        if (
+            author == user or
+            Subscribe.objects.filter(
+                author=author,
+                user=user
+            ).exists()
+        ):
+            raise serializers.ValidationError(
+                'Нельзя подписаться на этого пользователя!'
+            )
+        return data

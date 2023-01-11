@@ -31,13 +31,15 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def subscribe(self, request, pk=None):
-        serializer = SubscribeSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
         author = get_object_or_404(self.queryset, pk=pk)
-        subscription = author.subscribed.filter(user=self.request.user)
-        if subscription.exists() or author == self.request.user:
-            error = {'error': 'can not subscribe'}
-            return Response(error, status=status.HTTP_400_BAD_REQUEST)
+        serializer = SubscribeSerializer(
+            context={
+                'request': request,
+                'author': author
+            },
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
         serializer.save(
             user=self.request.user,
             author=author
@@ -53,7 +55,9 @@ class UserViewSet(viewsets.ModelViewSet):
     @subscribe.mapping.delete
     def unsubscribe(self, request, pk=None):
         author = get_object_or_404(self.queryset, pk=pk)
-        get_object_or_404(Subscribe, author=author, user=self.request.user).delete()
+        get_object_or_404(
+            Subscribe, author=author, user=self.request.user
+        ).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'])
@@ -107,63 +111,56 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeCUDSerializer
 
     @staticmethod
-    def create_recipe_link(recipe, link, request, serializer):
-        if link.exists():
-            error = {"error": "already in"}
-            return Response(error, status=status.HTTP_400_BAD_REQUEST)
-
+    def create_recipe_link(pk, request, link_serializer):
+        data = {
+            'user': request.user.id,
+            'recipe': pk
+        }
+        user = get_object_or_404(User, pk=data['user'])
+        recipe = get_object_or_404(Recipe, pk=data['recipe'])
+        serializer = link_serializer(
+            data=data, context={'request': request}
+        )   
+        serializer.is_valid(raise_exception=True)
         serializer.save(
-            user=request.user,
-            recipe=recipe,
+            user=user,
+            recipe=recipe
         )
         response = RecipeMiniSerializer(
-            recipe, context={'request': request}
+            Recipe.objects.get(id=pk), context={'request': request}
         )
         return Response(
             response.data, status=status.HTTP_201_CREATED,
         )
 
     @staticmethod
-    def delete_recipe_link(link):
-        link.delete()
+    def delete_recipe_link(pk, request, model):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        get_object_or_404(model, recipe=recipe, user=request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'])
     def favorite(self, request, pk=None):
-        serializer = FavoriteSerializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        recipe = get_object_or_404(Recipe, pk=pk)
-        in_favorite = recipe.favorite.filter(user=self.request.user)
-        return self.create_recipe_link(recipe, in_favorite, request, serializer)
+        return self.create_recipe_link(pk, request, FavoriteSerializer)
 
     @favorite.mapping.delete
     def delete_from_favorite(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, pk=pk)
-        in_favorite = get_object_or_404(
-            Favorite, recipe=recipe, user=self.request.user
-        )
-        return self.delete_recipe_link(in_favorite)
+        return self.delete_recipe_link(pk, request, Favorite)
 
     @action(detail=True, methods=['post'])
     def shopping_cart(self, request, pk=None):
-        serializer = ShoppingCartSerializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        recipe = get_object_or_404(Recipe, pk=pk)
-        in_shoppingcart = recipe.shoppingcart.filter(user=self.request.user)
-        return self.create_recipe_link(recipe, in_shoppingcart, request, serializer)
+        return self.create_recipe_link(pk, request, ShoppingCartSerializer)
 
     @shopping_cart.mapping.delete
     def delete_from_shopping_cart(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, pk=pk)
-        in_shoppingcart = get_object_or_404(
-            ShoppingCart, recipe=recipe, user=self.request.user
-        )
-        return self.delete_recipe_link(in_shoppingcart)
+        return self.delete_recipe_link(pk, request, ShoppingCart)
 
     @action(detail=False)
     def download_shopping_cart(self, request):
         recipes = Recipe.objects.filter(shoppingcart__user=self.request.user)
-        ingredients_to_recipes = IngredientToRecipe.objects.filter(recipe__in=recipes)
+        ingredients_to_recipes = IngredientToRecipe.objects.filter(
+            recipe__in=recipes
+        )
         pdf = pdf_generator.generate(ingredients_to_recipes)
         return FileResponse(pdf, as_attachment=True, filename='test.pdf')
 
